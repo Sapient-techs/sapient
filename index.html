@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sapient — The Backtest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EDF8;--ink:#111B45;--mute:#4A5585;--line:#B7C0E0;--panel:#DCE2F4;--gold:#8F5B00;--loss:#B3301D;
+  color-scheme:light;box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1538;--ink:#EEF2FF;--mute:#A3AED8;--line:#2B3770;--panel:#161F52;--gold:#F2B134;--loss:#FF7A66;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1538;--ink:#EEF2FF;--mute:#A3AED8;--line:#2B3770;--panel:#161F52;--gold:#F2B134;--loss:#FF7A66;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,Arial,sans-serif;font-size:1.0625rem;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:20}
+a{color:inherit;text-decoration-color:var(--gold);text-decoration-thickness:2px;text-underline-offset:.2em}
+a:hover{color:var(--gold)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+h1,h2{font-family:Unbounded,"Arial Black",Arial,sans-serif;margin:0;line-height:1.1}
+.skip{position:absolute;left:1rem;top:-4rem;background:var(--ink);color:var(--bg);padding:.5rem 1rem;z-index:30}
+.skip:focus{top:calc(env(safe-area-inset-top,0px) + .5rem)}
+.hero{position:relative;padding:4rem 1.5rem 3rem;min-height:88vh;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.hero svg.pat{position:absolute;inset:0;width:100%;height:100%;opacity:.55;-webkit-mask-image:linear-gradient(#000 30%,transparent);mask-image:linear-gradient(#000 30%,transparent)}
+.hero>*:not(.pat){position:relative;max-width:60rem}
+.hero h1{font-size:clamp(3rem,12vw,8rem);font-weight:700;letter-spacing:-.03em}
+.hero .lede{font-size:clamp(1.15rem,2.6vw,1.5rem);max-width:34rem;margin:1.25rem 0 1.75rem}
+.lens{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;border:0;padding:0;margin:0}
+.lens legend{float:left;margin-right:.75rem;padding:0;line-height:2.4rem;color:var(--mute)}
+.lens button{font:inherit;font-weight:600;background:transparent;color:var(--ink);border:2px solid var(--ink);border-radius:999px;padding:.35rem 1rem;cursor:pointer;min-height:2.5rem}
+.lens button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.hint{margin-top:2rem;color:var(--mute);font-size:.95rem}
+.hint a{margin-left:1rem}
+.hint a.play{margin:0 0 0 .25rem;display:inline-block;font-weight:600;border:2px solid var(--gold);border-radius:999px;padding:.2rem .9rem;text-decoration:none;color:var(--ink)}
+.hint a.play:hover{background:var(--gold);color:var(--bg)}
+.intro{max-width:46rem;margin:0 auto;padding:5rem 1.5rem 3rem}
+.intro h2,.closing h2{font-size:clamp(1.5rem,3.6vw,2.2rem);margin-bottom:1.25rem}
+.intro p{margin:0 0 1rem}
+.intro summary{display:inline-block;cursor:pointer;font-weight:600;color:var(--gold);border-bottom:2px solid var(--gold);margin:.5rem 0 1rem;list-style:none}
+.intro summary::-webkit-details-marker{display:none}
+.intro .story{border-left:4px solid var(--line);padding-left:1.25rem;margin-top:1rem}
+.dreams{list-style:none;padding:0;margin:1.5rem 0 0}
+.dreams li{border-left:4px solid var(--gold);padding:.25rem 0 .25rem 1rem;margin:1rem 0}
+.closing{max-width:46rem;margin:0 auto;padding:4rem 1.5rem 7rem;border-top:1px solid var(--line)}
+.closing code{display:block;margin-top:1.5rem;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--gold);font-size:1.1rem}
+.stage{display:grid;grid-template-columns:minmax(18rem,2fr) 3fr;gap:3rem;max-width:72rem;margin:0 auto;padding:0 1.5rem}
+.chart{position:sticky;top:calc(env(safe-area-inset-top,0px) + 1rem);align-self:start;padding-top:2rem}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .cap{font-weight:600;margin:.5rem 0 0;min-height:1.6em}
+.eq{fill:none;stroke:var(--ink);stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}
+.fut{fill:none;stroke:var(--gold);stroke-width:3;stroke-dasharray:3 8;stroke-linecap:round}
+.fan{fill:var(--gold);opacity:0}
+.grid line{stroke:var(--line);stroke-width:1}
+.dot{fill:var(--bg);stroke:var(--ink);stroke-width:3}
+.dot.loss{stroke:var(--loss);fill:var(--loss)}
+.chap{padding:6rem 0 4rem;border-top:1px solid var(--line)}
+.chap:first-child{border-top:0}
+.chap h2{font-size:clamp(1.5rem,3.6vw,2.2rem);margin-bottom:1rem}
+.chap>p{max-width:36rem}
+.p{border-left:4px solid var(--ink);padding:.25rem 0 .25rem 1rem;margin:1.5rem 0;max-width:36rem;transition:opacity .3s}
+.p h3{margin:0;font-size:1.15rem}
+.p p{margin:.2rem 0 0}
+.p.flop{border-left-color:var(--loss)}
+.p.dim{opacity:.28}
+.finale{padding:6rem 0 8rem}
+.finale a.mail{font-family:Unbounded,Arial,sans-serif;font-size:clamp(1.1rem,3vw,1.6rem)}
+.small{color:var(--mute);font-size:.9rem;margin-top:1.5rem}
+@media (max-width:50rem){
+  .stage{display:block;padding:0 1.25rem}
+  .chart{top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);padding:.5rem 0;border-bottom:1px solid var(--line)}
+  .chart svg{max-height:110px}
+  .chart .cap{display:none}
+  .chap{padding:3rem 0 2.5rem}
+}
+@media (prefers-reduced-motion:reduce){.p{transition:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skip" href="#work">Skip to work</a>
+
+<header class="hero">
+  <svg class="pat" aria-hidden="true"><defs><pattern id="ad" width="56" height="56" patternUnits="userSpaceOnUse"><g fill="none" stroke="var(--line)" stroke-width="2"><circle cx="28" cy="28" r="6"/><circle cx="28" cy="28" r="13"/><circle cx="28" cy="28" r="21"/></g><g fill="var(--line)"><circle cx="0" cy="0" r="3"/><circle cx="56" cy="0" r="3"/><circle cx="0" cy="56" r="3"/><circle cx="56" cy="56" r="3"/></g></pattern></defs><rect width="100%" height="100%" fill="url(#ad)"/></svg>
+  <h1>Sapient</h1>
+  <p class="lede">Every system gets backtested. This is mine: the wins, the drawdown, and what the model expects next.</p>
+  <fieldset class="lens"><legend>Read it as</legend>
+    <button type="button" data-l="all" aria-pressed="true">Everything</button>
+    <button type="button" data-l="ml" aria-pressed="false">ML</button>
+    <button type="button" data-l="web" aria-pressed="false">Web</button>
+    <button type="button" data-l="trading" aria-pressed="false">Trading</button>
+  </fieldset>
+  <p class="hint">Best with sound: <a class="play" href="https://open.spotify.com/track/6gYhfRVdCAtZDVhBzQRWBI" target="_blank" rel="noopener">Play Seven Lifes</a> (opens Spotify)</p>
+  <p class="hint" style="margin-top:.5rem">Then scroll. The line follows my career.<a href="#work">Skip to work</a></p>
+</header>
+
+<section class="intro" aria-labelledby="th">
+  <h2 id="th">The thesis</h2>
+  <p>Tech has always been a candy bowl I couldn’t stop reaching into. I repaired torchlights, turned dead CD-player motors into fans, and built RC cars, periscopes and VR goggles out of cardboard boxes. Then I went digital, building apps and 3D games on an itel A14 with Sketchware and Struckd, and teaching myself Python on a phone. When I found trading I couldn’t stop thinking about joining the two worlds, and almost everything I build now sits where smart systems meet markets. What keeps me going is simple: the joy of watching people use something I made.</p>
+  <details>
+    <summary>Read the longer story</summary>
+    <div class="story">
+      <p>I can’t remember when I fell in love with tech. It has always been part of who I am. growing up, tech was like a bowl filled with different candies that you love, you always want a taste of everything.</p>
+      <p>It started with repairing torchlights and pulling the DC motors out of dead CD players to build fans. Then came RC cars, and cardboard boxes became car bodies, VR goggles, periscopes and racing-game controllers for my phone.</p>
+      <p>At some point I moved from physical tech to digital, and the digital world felt unreal. There was so much to pick from: game dev, web dev, app dev and more, and I wanted to touch all of it. I tried learning Java through a gamified app, but I never finished it, and I wish I had stayed focused. Then I found Sketchware, one of the first drag-and-drop development tools. It ran on Java, so it was Java with blocks, and its Facebook community was legendary. What you could build was limited only by your creativity and skill: apps, games and more. It made me feel like a developer. When its founders shut it down for lack of funding, community members built Sketchware Pro, with more features and more bugs, and I loved that too.</p>
+      <p>Then I found Unity, and Struckd, a lighter alternative that worked well on my phone, and I built plenty of 3D games with it. Everything I did back then was on my itel A14. I also used AIDE and Pocket Code.</p>
+      <p>Then I went into cybersecurity and found Zanti, a mobile penetration-testing app that security professionals use to analyse a network and find its weaknesses. It fascinated me that a tool like that could fit on a phone.</p>
+      <p>Later I got into WordPress, back when it wasn’t as popular as it is today, playing with themes and templates. Then animation: I made cartoons with Plotagon, which lagged so badly my phone almost gave up.</p>
+      <p>Then I found Python. I taught myself from YouTube, and it was rough because I didn’t have my own PC. I used Pydroid 3 and built a speech-recognition bot with speech-to-text and text-to-speech, plus date and time, random and other modules. I tried Termux too.</p>
+      <p>I can’t remember a time I wasn’t doing something related to tech, and I have always dreamed of building products and services. The joy of people using what I make is almost enough to keep me going. When I found trading, I couldn’t stop thinking about joining the two worlds. That is why most of my projects today merge smart systems and AI with trading, and why I chose Python. Now I’m going deep into machine learning and AI.</p>
+    </div>
+  </details>
+  <h2 style="margin-top:3rem">What I’m building toward</h2>
+  <ul class="dreams">
+    <li>A smart trading system of my own.</li>
+    <li>A tech product or service that lots of people use.</li>
+    <li>Leaving the world with a positive mark and influence.</li>
+  </ul>
+</section>
+
+<div class="stage">
+  <aside class="chart" aria-label="Career equity curve">
+    <svg viewBox="0 0 460 300" role="img" aria-label="A line that climbs, dips once, then climbs again into a forecast range.">
+      <g class="grid"><line x1="0" y1="75" x2="460" y2="75"/><line x1="0" y1="150" x2="460" y2="150"/><line x1="0" y1="225" x2="460" y2="225"/></g>
+      <polygon class="fan" id="fan" points="380,60 450,20 450,112"/>
+      <path class="eq" id="eq"/>
+      <path class="fut" id="fut" d="M380 60 L415 46 L450 62" opacity="0"/>
+      <g id="dots"></g>
+    </svg>
+    <p class="cap" id="cap" aria-live="off">&nbsp;</p>
+  </aside>
+
+  <main id="work">
+    <section class="chap" data-n="Reading charts by hand">
+      <h2>Reading charts by hand</h2>
+      <p>I started where most quants do: staring at price. Smart Money Concepts became my language for it. I published signals at Echelon Forex Academy, moderated the Crypto Tiger community, and wrote MetaTrader 5 Expert Advisors to automate what I was doing by eye.</p>
+      <div class="p" data-t="trading web"><h3>SapientSignals</h3><p>A signal reporting bridge that sends MetaTrader 5 output to a Node.js dashboard.</p></div>
+    </section>
+
+    <section class="chap" data-n="The drawdown">
+      <h2>The drawdown</h2>
+      <p>Not everything worked, and the curve shows it. I keep the losing trades because they changed how I build.</p>
+      <div class="p flop" data-t="ml trading"><h3>Sporty Hero advisor</h3><p>A Python tool that ran statistical analysis on historical crash-game multipliers. It flopped. The maths was fine, but the premise wasn’t: a game built to be unpredictable doesn’t reward a better model of its past. Now I check that a signal can exist before I build the thing that measures it.</p></div>
+    </section>
+
+    <section class="chap" data-n="Teaching machines to explain price">
+      <h2>Teaching machines to explain price</h2>
+      <p>The pivot: stop reading charts alone and make software that can read them, then say why.</p>
+      <div class="p" data-t="ml trading"><h3>APEX</h3><p>Autonomous Price Explainer. A Smart Money Concepts quantization engine that turns chart structure into price reads you can inspect.</p></div>
+      <div class="p" data-t="ml web trading"><h3>TradeVault</h3><p>A SaaS for visual search across trading screenshots, so you can find an old setup by what it looked like.</p></div>
+    </section>
+
+    <section class="chap" data-n="Shipping for real users">
+      <h2>Shipping for real users</h2>
+      <p>Models are only useful once someone can use them. I build the front ends, dashboards and sites around them, and take freelance clients on the same terms.</p>
+      <div class="p" data-t="web trading"><h3>NexusFX</h3><p>The front end of a forex broker app: a dark, institutional multi-section dashboard shipped as a single-file SPA.</p></div>
+      <div class="p" data-t="web"><h3>Heartgram</h3><p>Lets people plan surprise experiences for long-distance couples and diaspora families.</p></div>
+      <div class="p" data-t="web"><h3>Freelance web development</h3><p>Websites and web apps for clients, built end to end under Sapient-techs.</p></div>
+    </section>
+
+    <section class="chap" data-n="Now">
+      <h2>Now</h2>
+      <div class="p" data-t="ml"><h3>ML Engineer, Mzienet Systems</h3><p>Machine learning engineering.</p></div>
+      <div class="p" data-t="ml web trading"><h3>Senior Developer and Researcher, Sapient Intelligence Suite</h3><p>Research and development across ML and trading systems.</p></div>
+    </section>
+
+    <section class="finale" id="finale" data-n="The forecast">
+      <h2>The forecast</h2>
+      <p>The range ahead is wide on purpose. If you’re building something where machine learning, markets or a good web app matters, let’s talk.</p>
+      <p><a class="mail" href="mailto:Adedoyinyonex@gmail.com">Adedoyinyonex@gmail.com</a></p>
+      <p class="small" style="font-size:1rem"><a href="https://github.com/sapient-techs" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://www.tiktok.com/@that_ai_monk" target="_blank" rel="noopener">TikTok</a> &middot; <a href="https://x.com/Sapient_23" target="_blank" rel="noopener">X</a></p>
+    </section>
+  </main>
+</div>
+
+<section class="closing" aria-labelledby="cl">
+  <h2 id="cl">Let’s connect</h2>
+  <p>I want to step out of my comfort zone and meet more people in this space: hackathons, seminars, real discussions. I’m not surrounded by many people who love this stuff, and I want to be. If you want to connect, I’m open to strategic relationships. We could form a team and shake the world, or you can just watch me do it myself.</p>
+  <p>If you’ve read this far, thank you. You’re my kind of person, and I wish you all the best in what you’re building.</p>
+  <code>print('Thank you')</code>
+</section>
+
+<script>
+(function(){
+  var pts=[[20,260],[45,238],[65,246],[95,190],[115,200],[135,222],[150,236],[185,200],[205,170],[225,180],[240,142],[270,126],[290,132],[320,96],[345,84],[360,90],[380,60]];
+  var A=[0,3,6,10,13,16], NS='http://www.w3.org/2000/svg';
+  var eq=document.getElementById('eq'),fut=document.getElementById('fut'),fan=document.getElementById('fan'),dots=document.getElementById('dots'),cap=document.getElementById('cap');
+  var cum=[0],i;
+  for(i=1;i<pts.length;i++){cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));}
+  var L=cum[cum.length-1];
+  eq.setAttribute('d','M'+pts.map(function(p){return p.join(' ');}).join('L'));
+  eq.style.strokeDasharray=L;eq.style.strokeDashoffset=L;
+  var dd=[];
+  A.forEach(function(a,k){var c=document.createElementNS(NS,'circle');c.setAttribute('cx',pts[a][0]);c.setAttribute('cy',pts[a][1]);c.setAttribute('r',6);c.setAttribute('class','dot'+(k===2?' loss':''));c.style.opacity=k===0?1:0;dots.appendChild(c);dd.push(c);});
+  var chs=[].slice.call(document.querySelectorAll('.chap')),fin=document.getElementById('finale'),fs=[];
+  function cl(v){return Math.min(1,Math.max(0,v));}
+  function upd(){
+    var vh=innerHeight,drawn=0,act=-1;
+    chs.forEach(function(c,k){
+      var r=c.getBoundingClientRect(),f=cl((vh*.7-r.top)/(r.height*.85));
+      fs[k]=f;drawn+=f*(cum[A[k+1]]-cum[A[k]]);
+      if(f>0)act=k;
+      dd[k+1].style.opacity=f>=.98?1:0;
+    });
+    eq.style.strokeDashoffset=Math.max(0,L-drawn);
+    var rf=fin.getBoundingClientRect(),ff=cl((vh*.85-rf.top)/(rf.height*.5));
+    fan.style.opacity=ff*.28;fut.setAttribute('opacity',ff);
+    cap.textContent=ff>.3?'The forecast':(act>=0?chs[act].getAttribute('data-n'):'\u00a0');
+  }
+  var t=false;
+  function req(){if(!t){t=true;requestAnimationFrame(function(){t=false;upd();});}}
+  addEventListener('scroll',req,{passive:true});addEventListener('resize',req);upd();
+  var bs=document.querySelectorAll('.lens button'),ps=document.querySelectorAll('.p');
+  bs.forEach(function(b){b.addEventListener('click',function(){
+    var l=b.getAttribute('data-l');
+    bs.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+    ps.forEach(function(p){var on=l==='all'||p.getAttribute('data-t').split(' ').indexOf(l)>-1;p.classList.toggle('dim',!on);});
+  });});
+})();
+</script>
+</body>
+</html>
